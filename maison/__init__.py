@@ -1,0 +1,8 @@
+from importlib.metadata import PackageNotFoundError, version
+
+REPOSITORY_URL = "https://github.com/jmoniatte/maison"
+
+try:
+    __version__ = version("maison")
+except PackageNotFoundError:
+    __version__ = "0.0.0"

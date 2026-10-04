@@ -1,0 +1,10 @@
+# ~/.config/maison/config.yaml (optional)
+
+# Color theme: terminal (read from the terminal itself) or any base16 scheme
+# in tui-kit (tui_kit/styles/themes/), by its upstream slug. Press t in the app to
+# browse them; the choice is written back here.
+theme: terminal
+
+# The SQLite database, created with its tables when missing; in Dropbox so every computer
+# sees the same data.
+database_path: '~/Dropbox/data/maison.sqlite3'

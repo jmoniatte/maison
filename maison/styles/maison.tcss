@@ -1,0 +1,288 @@
+/* ═══════════════════════════════════════════════════════════════════════
+   FOOTER - the same under every tab: a rule, then Exit and Help
+   ═══════════════════════════════════════════════════════════════════════ */
+
+#app-footer {
+    dock: bottom;
+    height: auto;
+}
+
+#app-footer-bar {
+    height: auto;
+    padding: 0 1;
+    border-top: solid $gutter;
+}
+
+/* Neutral, like the Close button on tui-kit's panels; Exit is tinted red. Help on the right */
+#btn-help {
+    dock: right;
+    width: auto;
+    min-width: 0;
+    height: 1;
+    margin: 0;
+    border: none;
+    padding: 0 2;
+    background: $bg-light;
+    color: $fg;
+}
+
+#btn-help:hover {
+    background: $gutter;
+}
+
+/* A message in Help's place while one shows (FooterMessage), right-aligned over the room left of
+   it, an error still on up to three lines */
+FooterMessage {
+    width: 1fr;
+    margin-left: 2;
+    padding: 0;
+    text-align: right;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   TABS - every tab's view, laid out the same way
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* On each tab's view (MaisonApp.compose); no room on top, since the tabs keep a blank row under them */
+.mode {
+    padding: 0 4 1 4;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   HELP - the keys every tab shares on the left, the tab's own on the right
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* As wide as their longest line, but some width each, so a tab with no keys of its own does not
+   get a narrow panel: General's own width */
+MaisonHelpScreen .shortcuts-section {
+    width: auto;
+    min-width: 24;
+}
+
+MaisonHelpScreen #shortcuts-general {
+    margin-right: 4;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   MONEY - the dashboard lists the accounts; one opens on its own page
+   ═══════════════════════════════════════════════════════════════════════ */
+
+#money-pages,
+#money-pages > *,
+#accounts-scroll {
+    height: 1fr;
+}
+
+/* "── Joint ────", over each owner's table, and "── Transactions ────" over an account's */
+SectionTitle {
+    color: $yellow;
+    text-style: bold;
+}
+
+/* As tall as its labels and rows (AccountsTable sets the height), so the dashboard scrolls and never
+   the table; a blank row before the next owner */
+AccountsTable {
+    max-height: 100vh;
+    margin-bottom: 1;
+    scrollbar-size-vertical: 0;
+}
+
+#account-table,
+#returns-table {
+    height: 1fr;
+}
+
+/* As flotte's: "Accounts" blue, on an account's page a link back before the account's name, in yellow */
+#accounts-title,
+#breadcrumbs {
+    height: 1;
+    margin-bottom: 1;
+    padding: 0 1;
+}
+
+.breadcrumb-current {
+    width: auto;
+    color: $yellow;
+    text-style: bold;
+}
+
+#accounts-title,
+#breadcrumb-accounts {
+    color: $blue;
+}
+
+#breadcrumb-accounts {
+    width: auto;
+}
+
+#breadcrumb-accounts:hover {
+    text-style: underline;
+}
+
+#breadcrumb-separator {
+    width: auto;
+    margin: 0 1;
+    color: $comment;
+}
+
+#breadcrumbs .spacer {
+    width: 1fr;
+}
+
+/* The details on the left, the balance by them; a blank row under */
+#account-header {
+    height: auto;
+    margin-bottom: 1;
+}
+
+#account-details,
+#account-balance {
+    width: auto;
+    padding: 0 1;
+}
+
+#account-balance {
+    margin-left: 6;
+}
+
+#btn-new-transaction {
+    margin-right: 2;
+}
+
+/* Under the header: the Transactions and Balances tabs, each filling the page's height */
+#account-tabs,
+#account-tabs TabPane,
+#account-tabs ContentSwitcher {
+    height: 1fr;
+}
+
+#account-tabs TabPane {
+    padding: 0;
+}
+
+/* The balance chart, as tall as its tab, its axis and the years on its last two rows */
+#balance-chart {
+    height: 1fr;
+    padding: 0 1;
+}
+
+MoneyTable {
+    background: transparent;
+    color: $fg;
+}
+
+#accounts-scroll,
+MoneyTable {
+    scrollbar-size-vertical: 1;
+    scrollbar-background: $bg;
+    scrollbar-background-hover: $bg;
+    scrollbar-background-active: $bg;
+    scrollbar-color: $gutter;
+    scrollbar-color-hover: $comment;
+    scrollbar-color-active: $comment;
+}
+
+MoneyTable > .datatable--header,
+MoneyTable > .datatable--header-hover {
+    background: transparent;
+    color: $comment;
+    text-style: none;
+}
+
+/* Shaded only in the table that has focus: the dashboard has one per owner */
+MoneyTable > .datatable--cursor {
+    background: transparent;
+    color: $fg;
+    text-style: none;
+}
+
+MoneyTable:focus > .datatable--cursor {
+    background: $bg-light;
+}
+
+/* Never drawn: the cursor follows the pointer instead (MoneyTable) */
+MoneyTable > .datatable--hover {
+    background: transparent;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   NEW TRANSACTION - a modal form over the account's page
+   ═══════════════════════════════════════════════════════════════════════ */
+
+TransactionScreen {
+    align: center top;
+    background: $bg 80%;
+}
+
+/* As flotte's forms: grey labels, and fields with no box, only a line under them, blue when focused */
+TransactionScreen > Vertical {
+    width: 60;
+    padding: 1 2;
+}
+
+TransactionScreen #dialog-title {
+    margin-bottom: 1;
+}
+
+TransactionScreen .form-row {
+    height: 2;
+    align: left top;
+    margin-bottom: 1;
+}
+
+/* tui-kit pads labels down to meet its boxed inputs; these fields have no top border */
+TransactionScreen .form-row .field-label {
+    width: 14;
+    padding: 0;
+    color: $comment;
+}
+
+TransactionScreen Input {
+    width: 1fr;
+    height: 2;
+    padding: 0;
+    background: transparent;
+    border: none;
+    border-bottom: solid $gutter;
+}
+
+TransactionScreen Input:hover {
+    border-bottom: solid $blue;
+}
+
+TransactionScreen Input:focus {
+    border: none;
+    border-bottom: solid $blue;
+    background: transparent;
+}
+
+/* Under the fields, each only when it has something to say, a blank row under it */
+TransactionScreen #transaction-preview,
+TransactionScreen #transaction-error {
+    display: none;
+    height: auto;
+    margin-bottom: 1;
+}
+
+TransactionScreen #transaction-error {
+    color: $red;
+}
+
+/* The last field's blank row is the space over them */
+TransactionScreen #dialog-buttons {
+    height: 1;
+    margin-top: 0;
+}
+
+TransactionScreen .tinted {
+    margin: 0 0 0 1;
+}
+
+/* Between Delete, on the left, and Cancel and Save */
+TransactionScreen #dialog-buttons .spacer {
+    width: 1fr;
+}
+
+TransactionScreen #delete-btn {
+    margin: 0;
+}
