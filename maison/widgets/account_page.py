@@ -26,7 +26,7 @@ TABS = (TRANSACTIONS, BALANCES, RETURNS)
 
 
 class AccountPage(Vertical):
-    """The breadcrumbs, "Accounts > Brokerage", with the New Transaction and Back buttons at the right; a
+    """The breadcrumbs, "Accounts > Brokerage", with the New Transaction button at the right; a
     header with the account's details on the left and its balance by them; under it three tabs: Transactions, fin's balances and periods in one table,
     Balances, a chart of the balance over time, and Returns, a row per year."""
 
@@ -37,7 +37,7 @@ class AccountPage(Vertical):
     ]
 
     class Closed(Message):
-        """The Back button or "Accounts" in the breadcrumbs was pressed."""
+        """ "Accounts" in the breadcrumbs was clicked."""
 
     class Changed(Message):
         """A balance of the account was entered, changed or deleted, to record: change is the balance to
@@ -62,7 +62,6 @@ class AccountPage(Vertical):
             yield Static("", id="breadcrumb-account", classes="breadcrumb-current", markup=False)
             yield Static(classes="spacer")
             yield click_only(Button("New Transaction", id="btn-new-transaction", classes="tinted"))
-            yield click_only(Button("Back", id="btn-back", classes="tinted -plain"))
         with Horizontal(id="account-header"):
             yield Static("", id="account-details")
             yield Static("", id="account-balance")
@@ -166,9 +165,8 @@ class AccountPage(Vertical):
         if self.has_focus_within:
             self.focus_tab()
 
-    @on(Button.Pressed, "#btn-back")
     @on(events.Click, "#breadcrumb-accounts")
-    def _back(self, event: Button.Pressed | events.Click) -> None:
+    def _back(self, event: events.Click) -> None:
         event.stop()
         self.post_message(self.Closed())
 

@@ -238,11 +238,11 @@ class AppTest(unittest.TestCase):
             await pilot.click("#breadcrumb-accounts")
             await pilot.pause()
             self.assertEqual((pages.current, app.focused), ("dashboard", claire))
-            # As does the Back button
+            self.assertFalse(app.query("#btn-back"))
+            # As does Backspace, from any tab
             await pilot.click(claire, offset=(8, 1))
             await pilot.pause()
-            await pilot.press("right")
-            await pilot.click("#btn-back")
+            await pilot.press("right", "backspace")
             await pilot.pause()
             self.assertEqual((pages.current, app.focused), ("dashboard", claire))
             # Another account opens on its transactions again

@@ -145,13 +145,14 @@ cursor was on (`Dashboard.current`). When the database could not open, the pages
 the footer says why. The pages tell `MoneyView` what happened by message, `Dashboard.Opened` and
 `AccountPage.Closed`, and know nothing of each other.
 
-The dashboard opens first. Enter or a click opens an account; Escape, Backspace, the Back button
-or "Accounts" in its breadcrumbs go back, the dashboard's cursor on the account left.
+The dashboard opens first. Enter or a click opens an account; Escape, Backspace or "Accounts" in its
+breadcrumbs go back, the dashboard's cursor on the account left.
 
 Both pages start with breadcrumbs, as flotte's: on the dashboard "Accounts", in blue; on an account's
 page "Accounts > Brokerage", "Accounts" in
 blue, underlined under the pointer, a link back to the dashboard, `>` grey, then the account's name
-in yellow, with the New Transaction and Back buttons at the right of the same row.
+in yellow, with the New Transaction button at the right of the same row. A Back button was tried
+and dropped: the breadcrumbs do its job.
 `MoneyView.action_back` raises `SkipAction` on the dashboard, so Escape there quits, as on every
 tab. Help lists Enter (the dashboard's, through `HELP_BINDINGS`, "Open the account or transaction"),
 `← →` and Escape. Tried and dropped: a

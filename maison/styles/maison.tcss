@@ -145,10 +145,6 @@ AccountsTable {
     margin-left: 6;
 }
 
-#btn-new-transaction {
-    margin-right: 2;
-}
-
 /* Under the header: the Transactions and Balances tabs, each filling the page's height */
 #account-tabs,
 #account-tabs TabPane,

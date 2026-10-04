@@ -8,7 +8,7 @@ and return of each; Balances, a chart of the balance over time; and Returns, a r
 the whole life. `←` and `→` switch. **New Transaction** opens a form for a
 new balance: its date, the cash flow put in or taken out, a description and the balance after it,
 with the gain and return it makes shown as you type. `Enter` or a click on a transaction opens it in the same form, to change it or delete it.
-`Esc` or **Back** goes back.
+`Esc`, or **Accounts** at the top, goes back.
 
 ## Install
 
