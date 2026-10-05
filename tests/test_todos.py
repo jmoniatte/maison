@@ -108,21 +108,24 @@ class TodosTest(unittest.TestCase):
         """What to email today: each todo's id, its number of reminders, and whether for its due date."""
         return [(notice.todo_id, len(notice.reminder_ids), notice.due) for notice in to_email(self.database, today)]
 
-    def test_each_reminder_and_the_due_date_are_emailed_once_and_again_if_the_date_changes(self) -> None:
+    def test_reminders_and_due_dates_are_emailed_on_their_day_and_once_after(self) -> None:
         todo_id = save_todo(self.database, Todo(0, "Passport", due_on=days(150), reminders=(180, 150, 30)))
         todo = load_todos(self.database)[0]
-        # Two reminders have come: one notice for the todo
+        # Two reminders have come, 180 days before (passed) and 150 (today): one notice for the todo
         self.assertEqual(to_email(self.database, TODAY), [Notice(todo_id, (1, 2), False)])
         mark_emailed(self.database, to_email(self.database, TODAY)[0], TODAY)
-        self.assertEqual(to_email(self.database, TODAY), [])
+        # Sent, today's (150 days before) goes again on every run today; a passed day's only if never sent
+        self.assertEqual(to_email(self.database, TODAY), [Notice(todo_id, (2,), False)])
+        self.assertEqual(to_email(self.database, days(1)), [])
         self.assertEqual(to_email(self.database, days(120)), [Notice(todo_id, (3,), False)])
-        # The due date, with no reminder left, and once only
+        # The due date, with no reminder left
         mark_emailed(self.database, to_email(self.database, days(120))[0], days(120))
         self.assertEqual(to_email(self.database, days(150)), [Notice(todo_id, (), True)])
         mark_emailed(self.database, to_email(self.database, days(150))[0], days(150))
+        self.assertEqual(to_email(self.database, days(150)), [Notice(todo_id, (), True)])
         self.assertEqual(to_email(self.database, days(151)), [])
 
-        # The same date keeps what was emailed, a new reminder can go
+        # The same date keeps what was emailed, a new reminder whose day has passed can go
         save_todo(self.database, replace(todo, reminders=(180, 160)))
         self.assertEqual(self.notices(days(151)), [(todo_id, 1, False)])
         # A new date and every reminder, and the date itself, can go again

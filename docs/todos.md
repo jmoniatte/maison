@@ -127,17 +127,20 @@ check.
 `maison due --email` sends one email per todo that has something to say (`to_email`), and nothing
 when none has:
 
-- a **reminder** whose day has come (`due_on - days_before`) and whose `emailed_on` is NULL
-- its **due date**, once it has come, if the todo is still open and `due_emailed_on` is NULL:
-  every dated todo gets this one, whatever its reminders
+- a **reminder** whose day (`due_on - days_before`) is today
+- its **due date**, if it is today and the todo is still open: every dated todo gets this one,
+  whatever its reminders
+
+Every run sends the day's emails, even those an earlier run sent that day. A reminder or due date
+whose day has passed goes too, once, if no run sent it (a missed run, or one set in the past). To
+tell, sending sets the reminders' `emailed_on`, and the todo's `due_emailed_on` when it was for the
+due date, to today; changing a todo's due date sets `due_emailed_on` back to NULL, as it does its
+reminders' `emailed_on`.
 
 A todo with both on the same run gets one email. Its subject says how far the due date is ("Renew
 passport: due in 6 months", "Change furnace filter: due today", "…: due 3 days ago" after a missed
-run); its body is the name, the due date and the note. Once an email is sent, its reminders'
-`emailed_on`, and the todo's `due_emailed_on` when it was for the due date, are set to today, so
-each goes once. If sending fails, that todo and those after it are left as they were, and the next
-run tries them again. A reminder or a due date already past when it was set fires on the next run.
-Changing a todo's due date sets `due_emailed_on` back to NULL, as it does its reminders' `emailed_on`.
+run); its body is the name, the due date and the note. If sending fails, that todo and those after
+it are left as they were, and the next run tries them again.
 
 It sends through SMTP over SSL with the standard library's `smtplib`, set in the config:
 

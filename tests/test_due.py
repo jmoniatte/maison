@@ -50,6 +50,16 @@ class DueTest(unittest.TestCase):
             run(self.database, self.config, True, TODAY + timedelta(days=290))
         self.assertEqual([call.args[0]["Subject"] for call in send.call_args_list], ["Clean gutters: due in 10 days"])
 
+    def test_every_run_sends_the_days_emails_even_if_sent(self) -> None:
+        save_todo(self.database, Todo(0, "Call the plumber", due_on=TODAY))
+        with patch("maison.due.send") as send:
+            run(self.database, self.config, True, TODAY)
+            run(self.database, self.config, True, TODAY)
+        subjects = [call.args[0]["Subject"] for call in send.call_args_list]
+        # The plumber is due today: on both runs; the filter's and the passport's days have passed: once
+        self.assertEqual(subjects.count("Call the plumber: due today"), 2)
+        self.assertEqual(len(subjects), 4)
+
 
 if __name__ == "__main__":
     unittest.main()

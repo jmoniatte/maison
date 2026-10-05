@@ -207,21 +207,24 @@ class Notice:
 
 
 def to_email(database: sqlite3.Connection, today: date) -> list[Notice]:
-    """The open todos with something to email today, by id: reminders whose day has come and that were
-    not emailed, or a due date that has come and was not."""
+    """The open todos with something to email today, by id: reminders and due dates whose day is today,
+    even if already emailed, so every run sends them; and those whose day has passed and that were never
+    emailed, missed by the runs before."""
     reminders: dict[int, list[int]] = {}
     for row in database.execute(
         """
-        SELECT todo_reminders.id, todo_id FROM todo_reminders JOIN todos ON todos.id = todo_id
-        WHERE closed_on IS NULL AND emailed_on IS NULL AND date(due_on, '-' || days_before || ' days') <= ?
+        SELECT todo_reminders.id, todo_id, date(due_on, '-' || days_before || ' days') AS day
+        FROM todo_reminders JOIN todos ON todos.id = todo_id
+        WHERE closed_on IS NULL AND (day = ? OR (day < ? AND emailed_on IS NULL))
         """,
-        (today.isoformat(),),
+        (today.isoformat(), today.isoformat()),
     ):
         reminders.setdefault(row[1], []).append(row[0])
     due = {
         row[0]
         for row in database.execute(
-            "SELECT id FROM todos WHERE closed_on IS NULL AND due_emailed_on IS NULL AND due_on <= ?", (today.isoformat(),)
+            "SELECT id FROM todos WHERE closed_on IS NULL AND (due_on = ? OR (due_on < ? AND due_emailed_on IS NULL))",
+            (today.isoformat(), today.isoformat()),
         )
     }
     return [Notice(todo_id, tuple(reminders.get(todo_id, ())), todo_id in due) for todo_id in sorted(set(reminders) | due)]
