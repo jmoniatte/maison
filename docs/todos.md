@@ -17,7 +17,7 @@ its page `TodoPage` (`widgets/todo_page.py`), with the reminders in
 
 ## Data
 
-Migration 5 adds two tables:
+Migration 5 adds two tables, and migration 6 a column:
 
 ```sql
 CREATE TABLE todos (
@@ -29,6 +29,8 @@ CREATE TABLE todos (
   closed_note TEXT,              -- the outcome: how it went
   pinned INTEGER NOT NULL DEFAULT 0
 );
+-- Migration 6
+ALTER TABLE todos ADD COLUMN due_emailed_on DATE;  -- when the due date's email went out
 CREATE TABLE todo_reminders (
   id INTEGER PRIMARY KEY,
   todo_id INTEGER NOT NULL,
@@ -122,12 +124,20 @@ when there are none, so it can run when a shell starts. `maison due --email` ema
 reminders instead. Neither needs a terminal, so `__main__` runs them before tui-kit's terminal
 check.
 
-A reminder fires once (`fired_reminders`): `maison due --email` looks for reminders of open todos
-whose day has come and whose `emailed_on` is NULL. With none, it sends nothing. With some, it
-sends one email: the todos they warn about under "Coming up", then every overdue todo under
-"Overdue", so an overdue todo is not forgotten; then it sets their `emailed_on` to today. If the
-sending fails, nothing is set, and the next run tries again. A reminder whose day was already
-past when it was added fires on the next run.
+`maison due --email` sends one email per todo that has something to say (`to_email`), and nothing
+when none has:
+
+- a **reminder** whose day has come (`due_on - days_before`) and whose `emailed_on` is NULL
+- its **due date**, once it has come, if the todo is still open and `due_emailed_on` is NULL:
+  every dated todo gets this one, whatever its reminders
+
+A todo with both on the same run gets one email. Its subject says how far the due date is ("Renew
+passport: due in 6 months", "Change furnace filter: due today", "…: due 3 days ago" after a missed
+run); its body is the name, the due date and the note. Once an email is sent, its reminders'
+`emailed_on`, and the todo's `due_emailed_on` when it was for the due date, are set to today, so
+each goes once. If sending fails, that todo and those after it are left as they were, and the next
+run tries them again. A reminder or a due date already past when it was set fires on the next run.
+Changing a todo's due date sets `due_emailed_on` back to NULL, as it does its reminders' `emailed_on`.
 
 It sends through SMTP over SSL with the standard library's `smtplib`, set in the config:
 

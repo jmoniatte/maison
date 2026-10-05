@@ -165,11 +165,15 @@ def save_todo(database: sqlite3.Connection, todo: Todo) -> int:
         emailed = {}
         if todo.id:
             before = database.execute("SELECT due_on FROM todos WHERE id = ?", (todo.id,)).fetchone()
-            if before["due_on"] == fields[2]:
+            same_due = before["due_on"] == fields[2]
+            if same_due:
                 emailed = dict(database.execute("SELECT days_before, emailed_on FROM todo_reminders WHERE todo_id = ?", (todo.id,)).fetchall())
             database.execute(
                 "UPDATE todos SET name = ?, note = ?, due_on = ?, closed_on = ?, closed_note = ?, pinned = ? WHERE id = ?", (*fields, todo.id)
             )
+            if not same_due:
+                # A new date is emailed again when it comes
+                database.execute("UPDATE todos SET due_emailed_on = NULL WHERE id = ?", (todo.id,))
             database.execute("DELETE FROM todo_reminders WHERE todo_id = ?", (todo.id,))
             todo_id = todo.id
         else:
@@ -193,20 +197,42 @@ def set_pinned(database: sqlite3.Connection, todo: Todo, pinned: bool) -> None:
     database.execute("UPDATE todos SET pinned = ? WHERE id = ?", (pinned, todo.id))
 
 
-def fired_reminders(database: sqlite3.Connection, today: date) -> list[tuple[int, int]]:
-    """The reminders of open todos whose day has come and that were not emailed, as (reminder id, todo id)."""
-    rows = database.execute(
+@dataclass(frozen=True)
+class Notice:
+    """What a todo's email is for: the reminders whose day has come, and whether its due date has."""
+
+    todo_id: int
+    reminder_ids: tuple[int, ...]
+    due: bool
+
+
+def to_email(database: sqlite3.Connection, today: date) -> list[Notice]:
+    """The open todos with something to email today, by id: reminders whose day has come and that were
+    not emailed, or a due date that has come and was not."""
+    reminders: dict[int, list[int]] = {}
+    for row in database.execute(
         """
         SELECT todo_reminders.id, todo_id FROM todo_reminders JOIN todos ON todos.id = todo_id
         WHERE closed_on IS NULL AND emailed_on IS NULL AND date(due_on, '-' || days_before || ' days') <= ?
         """,
         (today.isoformat(),),
-    )
-    return [(row[0], row[1]) for row in rows]
+    ):
+        reminders.setdefault(row[1], []).append(row[0])
+    due = {
+        row[0]
+        for row in database.execute(
+            "SELECT id FROM todos WHERE closed_on IS NULL AND due_emailed_on IS NULL AND due_on <= ?", (today.isoformat(),)
+        )
+    }
+    return [Notice(todo_id, tuple(reminders.get(todo_id, ())), todo_id in due) for todo_id in sorted(set(reminders) | due)]
 
 
-def mark_emailed(database: sqlite3.Connection, reminder_ids: list[int], today: date) -> None:
-    database.executemany("UPDATE todo_reminders SET emailed_on = ? WHERE id = ?", ((today.isoformat(), id) for id in reminder_ids))
+def mark_emailed(database: sqlite3.Connection, notice: Notice, today: date) -> None:
+    """notice's reminders, and its due date when it was for it, emailed today."""
+    with transaction(database):
+        database.executemany("UPDATE todo_reminders SET emailed_on = ? WHERE id = ?", ((today.isoformat(), id) for id in notice.reminder_ids))
+        if notice.due:
+            database.execute("UPDATE todos SET due_emailed_on = ? WHERE id = ?", (today.isoformat(), notice.todo_id))
 
 
 @contextmanager

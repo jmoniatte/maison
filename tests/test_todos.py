@@ -13,14 +13,15 @@ from maison.todos import (
     Todo,
     delete_todo,
     due_todos,
-    fired_reminders,
     load_todos,
+    Notice,
     mark_emailed,
     save_todo,
     search,
     set_pinned,
     split_length,
     split_status,
+    to_email,
     when,
 )
 
@@ -103,25 +104,35 @@ class TodosTest(unittest.TestCase):
         self.assertEqual([todo.name for todo in load_todos(self.database)], ["Paint the office", "Passport"])
         self.assertEqual(self.database.execute("SELECT count(*) FROM todo_reminders").fetchone()[0], 1)
 
-    def test_a_reminder_fires_once_on_its_day_and_again_if_it_or_the_due_date_changes(self) -> None:
+    def notices(self, today: date) -> list[tuple[int, int, bool]]:
+        """What to email today: each todo's id, its number of reminders, and whether for its due date."""
+        return [(notice.todo_id, len(notice.reminder_ids), notice.due) for notice in to_email(self.database, today)]
+
+    def test_each_reminder_and_the_due_date_are_emailed_once_and_again_if_the_date_changes(self) -> None:
         todo_id = save_todo(self.database, Todo(0, "Passport", due_on=days(150), reminders=(180, 150, 30)))
         todo = load_todos(self.database)[0]
-        fired = fired_reminders(self.database, TODAY)
-        self.assertEqual(fired, [(1, todo_id), (2, todo_id)])
-        mark_emailed(self.database, [reminder_id for reminder_id, _ in fired], TODAY)
-        self.assertEqual(fired_reminders(self.database, TODAY), [])
-        self.assertEqual(len(fired_reminders(self.database, days(120))), 1)
+        # Two reminders have come: one notice for the todo
+        self.assertEqual(to_email(self.database, TODAY), [Notice(todo_id, (1, 2), False)])
+        mark_emailed(self.database, to_email(self.database, TODAY)[0], TODAY)
+        self.assertEqual(to_email(self.database, TODAY), [])
+        self.assertEqual(to_email(self.database, days(120)), [Notice(todo_id, (3,), False)])
+        # The due date, with no reminder left, and once only
+        mark_emailed(self.database, to_email(self.database, days(120))[0], days(120))
+        self.assertEqual(to_email(self.database, days(150)), [Notice(todo_id, (), True)])
+        mark_emailed(self.database, to_email(self.database, days(150))[0], days(150))
+        self.assertEqual(to_email(self.database, days(151)), [])
 
-        # The same date keeps what was emailed, a new reminder can fire
+        # The same date keeps what was emailed, a new reminder can go
         save_todo(self.database, replace(todo, reminders=(180, 160)))
-        self.assertEqual(len(fired_reminders(self.database, TODAY)), 1)
-        # A new date and every reminder can fire again
+        self.assertEqual(self.notices(days(151)), [(todo_id, 1, False)])
+        # A new date and every reminder, and the date itself, can go again
         save_todo(self.database, replace(todo, due_on=days(160), reminders=(180, 160)))
-        self.assertEqual(len(fired_reminders(self.database, TODAY)), 2)
-        # Never for a todo closed, nor one with no date
+        self.assertEqual(self.notices(days(160)), [(todo_id, 2, True)])
+        # A todo with no reminder still has its due date; never one closed, nor one with no date
+        other_id = save_todo(self.database, Todo(0, "Filter", due_on=TODAY))
         save_todo(self.database, replace(todo, due_on=days(160), reminders=(180, 160), closed_on=TODAY))
         save_todo(self.database, Todo(0, "Paint", reminders=(7,)))
-        self.assertEqual(fired_reminders(self.database, TODAY), [])
+        self.assertEqual(to_email(self.database, TODAY), [Notice(other_id, (), True)])
 
 
 if __name__ == "__main__":

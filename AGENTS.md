@@ -29,7 +29,7 @@ tabs are the first row, and every message, errors included, goes to the footer, 
 ```bash
 maison            # Todos
 maison money
-maison due        # The todos due; --email emails their reminders
+maison due        # The todos due; --email emails each, for its reminders and due date
 ```
 
 It refuses to start unless stdin and stdout are a terminal (tui-kit's `start`); `maison due`

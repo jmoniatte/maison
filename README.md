@@ -8,7 +8,7 @@ todos come first, the soonest first: overdue in red, due soon in yellow, and tho
 last. **New Todo** (`n`) adds one; a todo can warn several times before its date (renew a
 passport: 6 months before, then 5). `Enter` or a click opens a todo's page, in the list's place, with room for a note on many lines,
 to change or delete it; `x` (or a click on its box) opens it to close the todo, with its outcome,
-or to reopen it; `p` (or a click on its star) pins it; `f` goes round Open, Closed and All. `maison due` prints the todos due, and `maison due --email` emails each reminder once, from a
+or to reopen it; `p` (or a click on its star) pins it; `f` goes round Open, Closed and All. `maison due` prints the todos due, and `maison due --email` sends one email per todo, for each reminder and on its due date, from a
 daily timer (see [docs/todos.md](docs/todos.md#email)).
 
 The second tab, Money, keeps track of investment accounts (a port of fin). It opens on the dashboard: every account's balance and yearly
@@ -34,7 +34,7 @@ where its shared UI library, [tui-kit](https://github.com/jmoniatte/tui-kit), li
 ```bash
 maison            # opens on Todos
 maison money
-maison due        # prints the todos due; --email emails their reminders
+maison due        # prints the todos due; --email emails each, for its reminders and due date
 ```
 
 Click a tab or press `Tab` to switch. `?` or the **Help** button at the bottom right shows the

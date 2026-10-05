@@ -18,7 +18,7 @@ class DueTest(unittest.TestCase):
         self.database.row_factory = sqlite3.Row
         self.addCleanup(self.database.close)
         migrate(self.database)
-        save_todo(self.database, Todo(0, "Change furnace filter", due_on=TODAY - timedelta(days=3), reminders=(7,)))
+        save_todo(self.database, Todo(0, "Change furnace filter", "16x25", due_on=TODAY - timedelta(days=3), reminders=(7,)))
         save_todo(self.database, Todo(0, "Renew passport", due_on=TODAY + timedelta(days=150), reminders=(180,)))
         save_todo(self.database, Todo(0, "Clean gutters", due_on=TODAY + timedelta(days=300), reminders=(14,)))
         # No date: never listed
@@ -31,23 +31,24 @@ class DueTest(unittest.TestCase):
             ["2026-10-01  Change furnace filter  3 days ago", "2027-03-03  Renew passport         5 months"],
         )
 
-    def test_emails_each_reminder_once_with_the_overdue_tasks_and_retries_a_failed_send(self) -> None:
+    def test_emails_each_todo_on_its_own_once_for_each_reminder_and_its_due_date(self) -> None:
+        # The filter's reminder and due date have come, the passport's reminder: two emails
         with patch("maison.due.send", side_effect=OSError("down")), self.assertRaises(OSError):
             run(self.database, self.config, True, TODAY)
         with patch("maison.due.send") as send:
             run(self.database, self.config, True, TODAY)
             run(self.database, self.config, True, TODAY)
-        self.assertEqual(send.call_count, 1)
-        message, config = send.call_args.args
-        self.assertEqual((message["Subject"], message["To"], config), ("Reminders: 2 todos", "me@example.com", EMAIL))
-        self.assertEqual(
-            message.get_content(),
-            "Coming up:\n  2027-03-03  Renew passport  5 months\n\nOverdue:\n  2026-10-01  Change furnace filter  3 days ago\n",
-        )
-        # The gutters' reminder fires later, with the filter and the passport overdue by then
+        self.assertEqual(send.call_count, 2)
+        (filter_email, config), (passport_email, _) = (call.args for call in send.call_args_list)
+        self.assertEqual((filter_email["Subject"], filter_email["To"], config), ("Change furnace filter: due 3 days ago", "me@example.com", EMAIL))
+        self.assertEqual(filter_email.get_content(), "Change furnace filter\nDue 2026-10-01 (due 3 days ago)\n\n16x25\n")
+        self.assertEqual(passport_email["Subject"], "Renew passport: due in 5 months")
+        # A failed send leaves the todo, and those after it, for the next run
+        with patch("maison.due.send", side_effect=[None, OSError("down")]) as send, self.assertRaises(OSError):
+            run(self.database, self.config, True, TODAY + timedelta(days=290))
         with patch("maison.due.send") as send:
             run(self.database, self.config, True, TODAY + timedelta(days=290))
-        self.assertEqual(send.call_args.args[0]["Subject"], "Reminders: 3 todos")
+        self.assertEqual([call.args[0]["Subject"] for call in send.call_args_list], ["Clean gutters: due in 10 days"])
 
 
 if __name__ == "__main__":

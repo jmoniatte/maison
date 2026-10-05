@@ -10,7 +10,7 @@ from email.message import EmailMessage
 
 from .config import Config, EmailConfig, load_config
 from .database import open_database
-from .todos import OVERDUE, Todo, due_todos, fired_reminders, load_todos, mark_emailed, when
+from .todos import Todo, due_todos, load_todos, mark_emailed, to_email, when
 
 
 def lines(todos: list[Todo], today: date) -> list[str]:
@@ -19,17 +19,24 @@ def lines(todos: list[Todo], today: date) -> list[str]:
     return [f"{todo.due_on.isoformat()}  {todo.name:<{width}}  {when(todo, today)}" for todo in todos]
 
 
-def email(todos: list[Todo], fired_ids: set[int], today: date, config: EmailConfig) -> EmailMessage:
-    """The todos whose reminders fired, then every overdue todo, so none is forgotten."""
-    coming = [todo for todo in todos if todo.id in fired_ids and todo.state(today) != OVERDUE]
-    overdue = [todo for todo in todos if todo.state(today) == OVERDUE]
-    listed = coming + overdue
+def due_phrase(todo: Todo, today: date) -> str:
+    """"due today", "due tomorrow", "due in 6 months", "due 3 days ago"."""
+    how_far = when(todo, today)
+    if how_far in ("Today", "Tomorrow", "Yesterday"):
+        return f"due {how_far.lower()}"
+    return f"due {how_far}" if how_far.endswith(" ago") else f"due in {how_far}"
+
+
+def email(todo: Todo, today: date, config: EmailConfig) -> EmailMessage:
+    """One todo's email: how far its due date is in the subject, then its name, due date and note."""
     message = EmailMessage()
-    message["Subject"] = f"Reminder: {listed[0].name}" if len(listed) == 1 else f"Reminders: {len(listed)} todos"
+    message["Subject"] = f"{todo.name}: {due_phrase(todo, today)}"
     message["From"] = config.sender
     message["To"] = config.to
-    sections = [(title, found) for title, found in (("Coming up", coming), ("Overdue", overdue)) if found]
-    message.set_content("\n\n".join(f"{title}:\n" + "\n".join(f"  {line}" for line in lines(found, today)) for title, found in sections) + "\n")
+    body = [todo.name, f"Due {todo.due_on.isoformat()} ({due_phrase(todo, today)})"]
+    if todo.note:
+        body += ["", todo.note]
+    message.set_content("\n".join(body) + "\n")
     return message
 
 
@@ -40,22 +47,20 @@ def send(message: EmailMessage, config: EmailConfig) -> None:
 
 
 def run(database: sqlite3.Connection, config: Config, send_email: bool, today: date) -> str:
-    """Print the todos due, or email those whose reminders fired; give what to print."""
-    todos = load_todos(database)
+    """Print the todos due, or email each todo with something to say; give what to print."""
+    todos = {todo.id: todo for todo in load_todos(database)}
     if not send_email:
-        return "\n".join(lines(due_todos(todos, today), today))
-    fired = fired_reminders(database, today)
-    if not fired:
-        return ""
-    send(email(todos, {todo_id for _, todo_id in fired}, today, config.email), config.email)
-    # Only once sent, so a failed send is tried again on the next run
-    mark_emailed(database, [reminder_id for reminder_id, _ in fired], today)
+        return "\n".join(lines(due_todos(list(todos.values()), today), today))
+    for notice in to_email(database, today):
+        send(email(todos[notice.todo_id], today, config.email), config.email)
+        # Only once sent: a failed send leaves this todo, and those after it, for the next run
+        mark_emailed(database, notice, today)
     return ""
 
 
 def main(argv: Sequence[str]) -> None:
-    parser = argparse.ArgumentParser(prog="maison due", description="Print the todos due or overdue, or email their reminders.")
-    parser.add_argument("--email", action="store_true", help="email the reminders whose day has come, once each")
+    parser = argparse.ArgumentParser(prog="maison due", description="Print the todos due or overdue, or email them, one email each.")
+    parser.add_argument("--email", action="store_true", help="email each todo whose reminder or due date has come, once each")
     args = parser.parse_args(argv)
     config = load_config()
     for warning in config.warnings:

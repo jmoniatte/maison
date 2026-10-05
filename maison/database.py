@@ -40,6 +40,10 @@ MIGRATIONS = (
         emailed_on DATE
     );
     """,
+    # 6: every open todo is emailed on its due date, once, whatever its reminders
+    """
+    ALTER TABLE todos ADD COLUMN due_emailed_on DATE;
+    """,
 )
 # The last migration a fin database already has
 FIN_VERSION = 2
