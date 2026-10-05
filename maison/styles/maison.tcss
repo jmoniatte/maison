@@ -94,7 +94,8 @@ AccountsTable {
 
 /* As flotte's: "Accounts" blue, on an account's page a link back before the account's name, in yellow */
 #accounts-title,
-#breadcrumbs {
+#breadcrumbs,
+.breadcrumbs {
     height: 1;
     margin-bottom: 1;
     padding: 0 1;
@@ -107,25 +108,30 @@ AccountsTable {
 }
 
 #accounts-title,
-#breadcrumb-accounts {
+#breadcrumb-accounts,
+#breadcrumb-todos {
     color: $blue;
 }
 
-#breadcrumb-accounts {
+#breadcrumb-accounts,
+#breadcrumb-todos {
     width: auto;
 }
 
-#breadcrumb-accounts:hover {
+#breadcrumb-accounts:hover,
+#breadcrumb-todos:hover {
     text-style: underline;
 }
 
-#breadcrumb-separator {
+#breadcrumb-separator,
+.breadcrumb-separator {
     width: auto;
     margin: 0 1;
     color: $comment;
 }
 
-#breadcrumbs .spacer {
+#breadcrumbs .spacer,
+.breadcrumbs .spacer {
     width: 1fr;
 }
 
@@ -202,38 +208,131 @@ MoneyTable > .datatable--hover {
 }
 
 /* ═══════════════════════════════════════════════════════════════════════
-   NEW TRANSACTION - a modal form over the account's page
+   TODOS - as Travail's: the search, the status and New Todo over the count and the rows
    ═══════════════════════════════════════════════════════════════════════ */
 
-TransactionScreen {
+#todo-controls {
+    height: auto;
+}
+
+#todo-controls #search {
+    width: 1fr;
+    background: $bg;
+    color: $fg;
+    border: solid $gutter;
+}
+
+#todo-controls #search:focus {
+    border: solid $blue;
+}
+
+/* Boxed like the search next to it; its overlay opens below */
+#todo-controls Select {
+    width: 14;
+    height: 3;
+    margin: 0 0 0 2;
+}
+
+#todo-controls Select SelectCurrent {
+    background: $bg;
+    border: solid $gutter;
+    padding: 0 1;
+    color: $fg;
+}
+
+#todo-controls Select:focus SelectCurrent {
+    border: solid $blue;
+}
+
+#todo-controls Select SelectOverlay {
+    background: $bg-dark;
+    border: none;
+}
+
+#todo-controls Select SelectOverlay > .option-list--option-highlighted {
+    background: $bg-light;
+    color: $fg;
+    text-style: none;
+}
+
+/* The search box is 3 rows with its border; the top margin lines the button up with its text */
+#todo-controls .tinted {
+    margin: 1 0 0 3;
+}
+
+#todo-count {
+    height: 1;
+    padding: 0 1;
+    color: $green;
+}
+
+#todo-rule {
+    height: 1;
+    color: $comment;
+}
+
+/* As Travail's: no header, the cursor's row shaded, the pointer moving it */
+#todo-table {
+    height: 1fr;
+    background: transparent;
+    color: $fg;
+    scrollbar-size-vertical: 1;
+    scrollbar-background: $bg;
+    scrollbar-background-hover: $bg;
+    scrollbar-background-active: $bg;
+    scrollbar-color: $gutter;
+    scrollbar-color-hover: $comment;
+    scrollbar-color-active: $blue;
+    overflow-x: hidden;
+}
+
+#todo-table > .datatable--cursor {
+    background: transparent;
+    color: auto;
+    text-style: none;
+}
+
+#todo-table:focus > .datatable--cursor {
+    background: $bg-light;
+}
+
+#todo-table > .datatable--hover {
+    background: transparent;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   FORMS - a transaction's modal form (.form-screen) and a todo's page, sharing the .form class
+   ═══════════════════════════════════════════════════════════════════════ */
+
+.form-screen {
     align: center top;
     background: $bg 80%;
 }
 
 /* As flotte's forms: grey labels, and fields with no box, only a line under them, blue when focused */
-TransactionScreen > Vertical {
+.form-screen > Vertical {
     width: 60;
     padding: 1 2;
 }
 
-TransactionScreen #dialog-title {
+.form #dialog-title {
     margin-bottom: 1;
 }
 
-TransactionScreen .form-row {
+.form .form-row {
     height: 2;
     align: left top;
     margin-bottom: 1;
 }
 
 /* tui-kit pads labels down to meet its boxed inputs; these fields have no top border */
-TransactionScreen .form-row .field-label {
+.form .field-label {
     width: 14;
     padding: 0;
     color: $comment;
 }
 
-TransactionScreen Input {
+.form Input {
     width: 1fr;
     height: 2;
     padding: 0;
@@ -242,43 +341,137 @@ TransactionScreen Input {
     border-bottom: solid $gutter;
 }
 
-TransactionScreen Input:hover {
+.form Input:hover {
     border-bottom: solid $blue;
 }
 
-TransactionScreen Input:focus {
+.form Input:focus {
     border: none;
     border-bottom: solid $blue;
     background: transparent;
 }
 
 /* Under the fields, each only when it has something to say, a blank row under it */
-TransactionScreen #transaction-preview,
-TransactionScreen #transaction-error {
+.form #transaction-preview,
+.form #transaction-error {
     display: none;
     height: auto;
     margin-bottom: 1;
 }
 
-TransactionScreen #transaction-error {
+.form #transaction-error {
     color: $red;
 }
 
 /* The last field's blank row is the space over them */
-TransactionScreen #dialog-buttons {
+.form #dialog-buttons {
     height: 1;
     margin-top: 0;
 }
 
-TransactionScreen .tinted {
+.form .tinted {
     margin: 0 0 0 1;
 }
 
 /* Between Delete, on the left, and Cancel and Save */
-TransactionScreen #dialog-buttons .spacer {
+.form #dialog-buttons .spacer {
     width: 1fr;
 }
 
-TransactionScreen #delete-btn {
+.form #delete-btn {
     margin: 0;
+}
+
+/* A reminder: a number, its unit, "before", then Remove at the right */
+.form .length-number {
+    width: 6;
+    margin-right: 2;
+}
+
+.form Select {
+    width: 14;
+    height: 2;
+}
+
+.form SelectCurrent {
+    height: 2;
+    padding: 0;
+    background: transparent;
+    border: none;
+    border-bottom: solid $gutter;
+}
+
+.form Select:focus > SelectCurrent {
+    border: none;
+    border-bottom: solid $blue;
+}
+
+.form .length-after {
+    width: 1fr;
+    margin-left: 2;
+    color: $comment;
+}
+
+/* The reminders, one row each, then Add reminder */
+.form .reminders-row,
+.form #reminders {
+    height: auto;
+}
+
+.form .reminder-row {
+    height: 2;
+}
+
+.form .remove-reminder {
+    margin: 0 0 0 2;
+}
+
+.form #add-reminder {
+    margin: 0 0 1 0;
+}
+
+.form #form-error {
+    display: none;
+    height: auto;
+    margin-bottom: 1;
+    color: $red;
+}
+
+/* A closed todo's day and outcome, in the reminders' place */
+.form #closed-part {
+    height: auto;
+}
+
+/* The todo form, kept short: no blank row between its fields, their lines under them set them apart */
+.form.-compact .form-row {
+    margin-bottom: 0;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   A TODO'S PAGE - in the list's place, with room for notes on many lines
+   ═══════════════════════════════════════════════════════════════════════ */
+
+#todo-list,
+#todo-page {
+    height: 1fr;
+}
+
+/* A field of many lines, boxed: two lines of text, growing with what is written up to ten */
+.form .text-row {
+    height: auto;
+    margin-bottom: 1;
+}
+
+.form TextArea {
+    width: 1fr;
+    height: auto;
+    min-height: 4;
+    max-height: 12;
+    padding: 0 1;
+    background: transparent;
+    border: round $gutter;
+}
+
+.form TextArea:focus {
+    border: round $blue;
 }

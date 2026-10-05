@@ -22,6 +22,24 @@ MIGRATIONS = (
     """
     UPDATE balances SET description = 'Statement' WHERE description = 'Interest';
     """,
+    # 5: the Todos tab: todos, open until closed, and the reminders that warn about each
+    """
+    CREATE TABLE todos (
+        id INTEGER PRIMARY KEY,
+        name TEXT NOT NULL,
+        note TEXT,
+        due_on DATE,
+        closed_on DATE,
+        closed_note TEXT,
+        pinned INTEGER NOT NULL DEFAULT 0
+    );
+    CREATE TABLE todo_reminders (
+        id INTEGER PRIMARY KEY,
+        todo_id INTEGER NOT NULL,
+        days_before INTEGER NOT NULL,
+        emailed_on DATE
+    );
+    """,
 )
 # The last migration a fin database already has
 FIN_VERSION = 2

@@ -1,8 +1,9 @@
 # maison
 
-TUI with home tools, one tab each: `maison money` (the default) says which tab it opens on.
-Money keeps track of investment accounts, a port of the fin Ruby gem (`~/jmoniatte/fin`,
-the reference for the old behavior).
+TUI with home tools, one tab each: `maison todos` (the default) or `maison money` says which
+tab it opens on. Todos keeps track of things to do, with dates and reminders, and emails the reminders
+(`maison due --email`). Money keeps track of investment accounts, a port of the fin Ruby gem
+(`~/jmoniatte/fin`, the reference for the old behavior).
 
 It is built on [tui-kit](https://github.com/jmoniatte/tui-kit), shared with outils, flotte
 and yafyaf-tui: the themes and the picker (`t`), the messages, Help (`?`), the
@@ -16,7 +17,7 @@ tabs are the first row, and every message, errors included, goes to the footer, 
 
 - Do not git commit unless asked
 - Specs come before code: describe a tab in `docs/<tab>.md` before building it, and read it
-  before changing that tab (`docs/money.md`, `docs/reminders.md`)
+  before changing that tab (`docs/money.md`, `docs/todos.md`)
 - Keep the shortcuts few: the ones on the Help panel are the whole set
 - The help screen lists every binding that has a description and a `group`
   (`tui_kit.shortcuts.ACTIONS` or `GENERAL`) in `MaisonApp.BINDINGS` and in the tab's view's
@@ -26,11 +27,13 @@ tabs are the first row, and every message, errors included, goes to the footer, 
 ## Run
 
 ```bash
-maison            # Money
+maison            # Todos
 maison money
+maison due        # The todos due; --email emails their reminders
 ```
 
-It refuses to start unless stdin and stdout are a terminal (tui-kit's `start`).
+It refuses to start unless stdin and stdout are a terminal (tui-kit's `start`); `maison due`
+needs none, so a timer can run it.
 
 ## Test
 
@@ -53,9 +56,11 @@ maison/                 # git root + pyproject.toml (run uv commands here)
   maison/               # Python package
     __init__.py         # The version and the repository's URL
     app.py              # MaisonApp, a tui-kit BaseApp: MODES, the footer and its messages, the keys
-    __main__.py         # The command line: which tab to open on
-    config.py           # Optional ~/.config/maison/config.yaml (theme, through tui_kit.config; database_path)
+    __main__.py         # The command line: which tab to open on, or maison due
+    config.py           # Optional ~/.config/maison/config.yaml (theme, through tui_kit.config; database_path; email)
     database.py         # The SQLite database: opening it and its migrations; no Textual
+    todos.py            # Todos, their reminders, searching them, and their writes; no Textual
+    due.py              # maison due: the todos due, printed or emailed; no Textual
     money.py            # Accounts, balances, periods and returns, as fin worked them out, and their writes; no Textual
     cells.py            # right and signed: the Rich text of numbers, for the tables and the form; no Textual
     click_only.py       # click_only: a widget a click does not give focus to
@@ -63,6 +68,11 @@ maison/                 # git root + pyproject.toml (run uv commands here)
       help_screen.py    # MaisonHelpScreen: tui-kit's Help, the app's keys and the tab's own
       transaction_screen.py  # TransactionScreen: the form for a new balance
     widgets/
+      todos_view.py     # TodosView, the Todos tab: a search, is:open or is:closed in it, over the todos
+      todo_page.py      # TodoPage: one todo, in the list's place: its fields, reminders or outcome
+      reminders.py      # Reminders: a todo's reminders on its page, each a number and a unit
+      todo_table.py     # TodoTable: a row per todo, as Travail's: the id, the box, the star, how far the due date is and the name
+      dashed_rule.py    # DashedRule: a dashed line as wide as the widget
       money_view.py     # MoneyView, the Money tab: loads the accounts, switches between its two pages
       dashboard.py      # Dashboard, the first page: an AccountsTable per owner
       account_page.py   # AccountPage: one account's details, then its transactions, balance chart and returns

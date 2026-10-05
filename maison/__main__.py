@@ -1,14 +1,23 @@
 import argparse
+import sys
 from collections.abc import Sequence
 
 from tui_kit.start import start
 
-from . import __version__
+from . import __version__, due
 from .app import DEFAULT_MODE, MODES, MaisonApp
 
 
 def main(argv: Sequence[str] | None = None) -> None:
-    parser = argparse.ArgumentParser(description="Home tools in the terminal: money.")
+    argv = list(sys.argv[1:] if argv is None else argv)
+    # Before tui-kit's start, which needs a terminal: it runs from a timer too
+    if argv[:1] == ["due"]:
+        due.main(argv[1:])
+        return
+    parser = argparse.ArgumentParser(
+        description="Home tools in the terminal: todos and money.",
+        epilog="maison due [--email] prints the todos due, or emails their reminders.",
+    )
     parser.add_argument("--version", action="version", version=f"maison {__version__}")
     parser.add_argument(
         "mode",

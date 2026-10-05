@@ -14,14 +14,14 @@ class MainTest(unittest.TestCase):
         self.assertEqual(raised.exception.code, 0)
         self.assertTrue(output.getvalue().startswith("maison "))
 
-    def test_the_mode_comes_from_the_command_line_and_defaults_to_money(self) -> None:
+    def test_the_mode_comes_from_the_command_line_and_defaults_to_todos(self) -> None:
         with (
             patch("maison.__main__.start", side_effect=lambda name, make_app: make_app()) as start,
             patch("maison.__main__.MaisonApp") as app,
         ):
             main([])
             main(["money"])
-        self.assertEqual([call.args for call in app.call_args_list], [("money",), ("money",)])
+        self.assertEqual([call.args for call in app.call_args_list], [("todos",), ("money",)])
         self.assertEqual(start.call_args.args[0], "maison")
 
         with contextlib.redirect_stderr(io.StringIO()), self.assertRaises(SystemExit) as raised:

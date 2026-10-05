@@ -19,13 +19,14 @@ from .click_only import click_only
 from .config import CONFIG_FILE, Config, load_config
 from .database import open_database
 from .screens import MaisonHelpScreen
-from .widgets import MoneyView
+from .widgets import MoneyView, TodosView
 
 STYLES_DIR = Path(__file__).parent / "styles"
 # tui-kit's stylesheets first, so the app's own rules win where they differ
 STYLE_FILES = (*tui_kit.STYLE_FILES, STYLES_DIR / "maison.tcss")
 # Each mode by the name given on the command line, as its tab; the first one is the default
 MODES = {
+    "todos": ("Todos", TodosView),
     "money": ("Money", MoneyView),
 }
 DEFAULT_MODE = next(iter(MODES))
@@ -56,7 +57,7 @@ def load_stylesheet() -> str:
 
 
 class MaisonApp(BaseApp):
-    """Home tools, one tab each: money."""
+    """Home tools, one tab each: todos and money."""
 
     TITLE = "maison"
     VERSION = __version__

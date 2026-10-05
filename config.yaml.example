@@ -8,3 +8,12 @@ theme: terminal
 # The SQLite database, created with its tables when missing; in Dropbox so every computer
 # sees the same data.
 database_path: '~/Dropbox/data/maison.sqlite3'
+
+# Where maison due --email sends the reminders; it needs to, from and password. SMTP over SSL.
+# email:
+#   to: me@fastmail.com
+#   from: me@fastmail.com
+#   password: an app password      # Fastmail: Settings > Privacy & Security > App passwords
+#   username: me@fastmail.com      # the default: from
+#   smtp_host: smtp.fastmail.com   # the default
+#   smtp_port: 465                 # the default

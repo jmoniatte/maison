@@ -1,11 +1,11 @@
 import asyncio
 import tempfile
-from datetime import date
+from datetime import date, timedelta
 import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from textual.widgets import Button, ContentSwitcher, DataTable, Input, Static, TabbedContent
+from textual.widgets import Button, ContentSwitcher, DataTable, Input, Select, Static, TabbedContent, TextArea
 from tui_kit.dialog import ConfirmDialog
 from tui_kit.help_screen import HelpScreen
 from tui_kit.theme_picker import ThemePicker
@@ -14,7 +14,9 @@ from maison.app import MODES, FooterMessage, MaisonApp
 from maison.config import Config
 from maison.database import MIGRATIONS, version
 from maison.screens import TransactionScreen
-from maison.widgets import MoneyView
+from maison.widgets.reminders import Reminders
+from maison.widgets.todo_page import TodoPage
+from maison.widgets import MoneyView, TodosView
 from maison.widgets.dashboard import AccountsTable, Dashboard
 from maison.widgets.money_table import SectionTitle
 
@@ -65,7 +67,7 @@ class AppTest(unittest.TestCase):
             tabs = app.query_one("#modes", TabbedContent)
             self.assertFalse(app.query("#app-header"))
             self.assertEqual(tabs.region.y, 0)
-            self.assertEqual([str(tabs.get_tab(f"{name}-mode").label) for name in MODES], ["Money"])
+            self.assertEqual([str(tabs.get_tab(f"{name}-mode").label) for name in MODES], ["Todos", "Money"])
             self.assertEqual(app.mode, "money")
             # No account yet, so no table to take focus
             self.assertIsNone(app.focused)
@@ -367,6 +369,169 @@ class AppTest(unittest.TestCase):
             self.assertTrue(dashboard.region.contains_region(claire.region))
 
         self.run_app(body, size=(80, 16))
+
+    def test_todos_are_searched_with_their_status_closed_and_pinned(self):
+        async def body(app, pilot):
+            today = date.today()
+            filter_due = (today - timedelta(days=3)).isoformat()
+            app.database.executescript(f"""
+                INSERT INTO todos (name, note, due_on, closed_on, closed_note) VALUES ('Change furnace filter', '16x25', '{today - timedelta(days=93)}', '{today - timedelta(days=92)}', 'really dirty');
+                INSERT INTO todos (name, note, due_on) VALUES ('Change furnace filter', '16x25', '{filter_due}');
+                INSERT INTO todos (name, due_on) VALUES ('Renew passport', '{today + timedelta(days=150)}');
+                INSERT INTO todos (name, pinned) VALUES ('Paint the office', 1);
+                INSERT INTO todo_reminders (todo_id, days_before) VALUES (2, 7), (3, 180);
+            """)
+            app.query_one(TodosView).load()
+            await pilot.pause()
+            tab = app.query_one("#modes", TabbedContent).get_tab("todos-mode")
+            self.assertEqual(str(tab.label), "Todos (2)")
+            table = app.query_one("#todo-table", DataTable)
+            search = app.query_one("#search", Input)
+            status = app.query_one("#todo-status", Select)
+            count = app.query_one("#todo-count")
+            self.assertEqual(app.focused, table)
+            # The search starts with is:open: the id, the box and the star, then how far the due date is and the
+            # name, the soonest first, those with no date last; red past it, yellow due, plain later
+            self.assertEqual((search.value, status.value, str(count.render())), ("is:open", "open", "3 open todos"))
+            self.assertEqual(cells(table), [
+                ["2", "\U000f0131  ☆", "3 days ago  Change furnace filter"],
+                ["3", "\U000f0131  ☆", "5 months    Renew passport"],
+                ["4", "\U000f0131  ★", "Someday     Paint the office"],
+            ])
+            palette = app.palette
+            self.assertEqual([table.get_row_at(row)[2].style for row in range(3)], [palette["red"], palette["yellow"], ""])
+            await pilot.press("question_mark")
+            await pilot.pause()
+            self.assertEqual(help_keys(app)["TODOS"], ["enter", "n", "x", "p", "space", "f", "/", "ctrl+s", "esc"])
+            await pilot.press("escape")
+
+            # / goes to the search, which follows the typing; Enter goes back to the list
+            await pilot.press("slash", *" furnace", "enter")
+            await pilot.pause()
+            self.assertEqual((search.value, str(count.render())), ("is:open furnace", "1 open todo matching 'furnace'"))
+            self.assertEqual(app.focused, table)
+            # f goes on to closed, then all; the dropdown and the search follow each other
+            await pilot.press("f")
+            await pilot.pause()
+            self.assertEqual((search.value, status.value), ("is:closed furnace", "closed"))
+            self.assertEqual([row[0] for row in cells(table)], ["1"])
+            await pilot.press("f")
+            await pilot.pause()
+            self.assertEqual((search.value, status.value, len(cells(table))), ("furnace", "all", 2))
+            search.value = "is:open"
+            await pilot.pause()
+            self.assertEqual(status.value, "open")
+
+            # p and a click on the star pin and unpin in the row
+            table.focus()
+            table.move_cursor(row=0)
+            await pilot.press("p")
+            await pilot.pause()
+            self.assertEqual(cells(table)[0][1], "\U000f0131  ★")
+            box_x = table.id_width + 1
+            await pilot.click(table, offset=(box_x + 3, 0))
+            await pilot.pause()
+            self.assertEqual(cells(table)[0][1], "\U000f0131  ☆")
+            self.assertEqual(app.database.execute("SELECT pinned FROM todos WHERE id = 2").fetchone()[0], 0)
+
+            # x opens the todo's page to close it: its box checked, the day and the outcome, which has focus,
+            # in the reminders' place; Save closes it and goes back to the list
+            await pilot.press("x")
+            await pilot.pause()
+            page = app.query_one(TodoPage)
+            self.assertFalse(app.query_one("#todo-list").display)
+            self.assertEqual((page.query_one("#open-part").display, page.query_one("#closed-part").display), (False, True))
+            self.assertEqual(page.query_one("#closed-on", Input).value, today.isoformat())
+            self.assertEqual(app.focused.id, "outcome")
+            await pilot.press(*"dirty again", "ctrl+s")
+            await pilot.pause()
+            self.assertFalse(app.query(TodoPage))
+            self.assertEqual(app.query_one(FooterMessage).render().plain, "Todo saved: Change furnace filter")
+            self.assertEqual(str(tab.label), "Todos (1)")
+            row = app.database.execute("SELECT closed_on, closed_note FROM todos WHERE id = 2").fetchone()
+            self.assertEqual(tuple(row), (today.isoformat(), "dirty again"))
+            # The box clicked on a closed one opens its page to reopen it, its reminders back
+            search.value = "is:closed"
+            await pilot.pause()
+            table.focus()
+            table.move_cursor(row=0)
+            await pilot.click(table, offset=(box_x, 0))
+            await pilot.pause()
+            page = app.query_one(TodoPage)
+            self.assertEqual((page.query_one("#open-part").display, page.query_one(Reminders).read()), (True, (7,)))
+            await pilot.click("#save-btn")
+            await pilot.pause()
+            self.assertEqual(app.database.execute("SELECT closed_on FROM todos WHERE id = 2").fetchone()[0], None)
+
+        self.run_app(body, mode="todos", size=(100, 30))
+
+    def test_todos_are_entered_changed_and_deleted_on_their_page(self):
+        async def body(app, pilot):
+            self.assertEqual(str(app.query_one("#todo-count").render()), "0 open todos")
+            await pilot.press("n")
+            await pilot.pause()
+            page = app.query_one(TodoPage)
+            # Today, a reminder a week before; a name is needed, a date is not
+            self.assertEqual(page.query_one("#due", Input).value, date.today().isoformat())
+            self.assertEqual(page.query_one(Reminders).read(), (7,))
+            self.assertFalse(page.query("#delete-btn"))
+            await pilot.click("#save-btn")
+            await pilot.pause()
+            self.assertEqual(str(page.query_one("#form-error").render()), "Enter what to do")
+            page.query_one("#name", Input).focus()
+            await pilot.press(*"Renew passport")
+            page.query_one("#due", Input).value = "2027-04-10"
+            page.query_one("#note", TextArea).text = "Claire's\nform DS-82"
+            await pilot.click("#add-reminder")
+            await pilot.pause()
+            await pilot.press("6")
+            # Enter in a field saves too
+            await pilot.press("enter")
+            await pilot.pause()
+            self.assertFalse(app.query(TodoPage))
+            rows = app.database.execute("SELECT name, due_on, note FROM todos").fetchall()
+            self.assertEqual([tuple(row) for row in rows], [("Renew passport", "2027-04-10", "Claire's\nform DS-82")])
+            reminders = app.database.execute("SELECT days_before FROM todo_reminders ORDER BY days_before DESC").fetchall()
+            self.assertEqual([row[0] for row in reminders], [180, 7])
+            self.assertEqual(app.query_one(FooterMessage).render().plain, "Todo added: Renew passport")
+
+            # Enter opens its page as typed; with no date it is for some day
+            await pilot.press("enter")
+            await pilot.pause()
+            page = app.query_one(TodoPage)
+            self.assertEqual(str(page.query_one(".breadcrumb-current").render()), "Renew passport")
+            self.assertEqual(page.query("#reminders Input")[0].value, "6")
+            page.query_one("#due", Input).value = ""
+            await pilot.click("#save-btn")
+            await pilot.pause()
+            self.assertEqual(cells(app.query_one("#todo-table", DataTable))[0][2], "Someday  Renew passport")
+            # Leaving with nothing changed goes straight back; with a change, it asks first
+            await pilot.press("enter")
+            await pilot.pause()
+            await pilot.press("escape")
+            await pilot.pause()
+            self.assertFalse(app.query(TodoPage))
+            await pilot.press("enter")
+            await pilot.pause()
+            app.query_one("#name", Input).value = "Renew passports"
+            await pilot.click("#breadcrumb-todos")
+            await pilot.pause()
+            self.assertIsInstance(app.screen, ConfirmDialog)
+            await pilot.press("enter")
+            await pilot.pause()
+            self.assertTrue(app.query(TodoPage))
+            # Delete asks first
+            await pilot.click("#delete-btn")
+            await pilot.pause()
+            self.assertIsInstance(app.screen, ConfirmDialog)
+            await pilot.click("#confirm-btn")
+            await pilot.pause()
+            await pilot.pause()
+            self.assertEqual(app.database.execute("SELECT count(*) FROM todos").fetchone()[0], 0)
+            self.assertFalse(app.query(TodoPage))
+            self.assertEqual(app.query_one(FooterMessage).render().plain, "Todo deleted: Renew passport")
+
+        self.run_app(body, mode="todos", size=(100, 40))
 
     def test_exit_button_and_q_quit(self):
         for quit in ("button", "q", "escape"):

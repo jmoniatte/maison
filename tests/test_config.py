@@ -2,7 +2,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from maison.config import DEFAULT_DATABASE, Config, load_config
+from maison.config import DEFAULT_DATABASE, Config, EmailConfig, load_config
 
 
 class ConfigTest(unittest.TestCase):
@@ -31,6 +31,13 @@ class ConfigTest(unittest.TestCase):
         wrong = self.load("database_path: 42\n")
         self.assertEqual(wrong.database_path, DEFAULT_DATABASE)
         self.assertEqual(wrong.warnings, [f"database_path: must be a file path, using {DEFAULT_DATABASE}"])
+
+    def test_email_needs_to_from_and_password_and_defaults_to_fastmail(self) -> None:
+        config = self.load("email:\n  to: me@fastmail.com\n  from: me@fastmail.com\n  password: secret\n")
+        self.assertEqual(config.email, EmailConfig("me@fastmail.com", "me@fastmail.com", "me@fastmail.com", "secret", "smtp.fastmail.com", 465))
+        missing = self.load("email:\n  to: me@fastmail.com\n")
+        self.assertIsNone(missing.email)
+        self.assertEqual(missing.warnings, ["email: from, password missing, emails are off"])
 
 
 if __name__ == "__main__":

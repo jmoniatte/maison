@@ -1,7 +1,7 @@
 [project]
 name = "maison"
 dynamic = ["version"]
-description = "TUI with home tools: money"
+description = "TUI with home tools: todos and money"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [

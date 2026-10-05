@@ -28,6 +28,7 @@ class TransactionScreen(ModalScreen[Balance | Deletion | None]):
     Under the fields, the gain and return it makes, as the fields are typed. It returns the balance
     to save (with the changed one's id, 0 when new), a Deletion, or None."""
 
+    DEFAULT_CLASSES = "form-screen form"
     BINDINGS = [("escape", "cancel", "Cancel")]
 
     def __init__(self, account: Account, balance: Balance | None = None) -> None:

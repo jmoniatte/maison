@@ -12,6 +12,18 @@ DEFAULT_DATABASE = Path.home() / "Dropbox" / "data" / "maison.sqlite3"
 
 
 @dataclass
+class EmailConfig:
+    """Where maison due --email sends the todos due, and the SMTP server it sends through (SSL)."""
+
+    to: str
+    sender: str
+    username: str
+    password: str
+    smtp_host: str = "smtp.fastmail.com"
+    smtp_port: int = 465
+
+
+@dataclass
 class Config:
     """Optional settings, written by hand; the app itself writes only the theme."""
 
@@ -20,6 +32,8 @@ class Config:
     theme: str = TERMINAL_THEME
     # The SQLite file; created, with its tables, when missing
     database_path: Path = DEFAULT_DATABASE
+    # None until the config file has an email section
+    email: EmailConfig | None = None
     # What in the config file was left out, and why; the footer shows these
     warnings: list[str] = field(default_factory=list)
 
@@ -43,6 +57,7 @@ def load_config(path: Path = CONFIG_FILE) -> Config:
     if warning:
         config.warnings.append(warning)
     _read_database_path(data.get("database_path"), config)
+    _read_email(data.get("email"), config)
     return config
 
 
@@ -53,3 +68,28 @@ def _read_database_path(value: object, config: Config) -> None:
         config.warnings.append(f"database_path: must be a file path, using {config.database_path}")
         return
     config.database_path = Path(value.strip()).expanduser()
+
+
+def _read_email(value: object, config: Config) -> None:
+    if value is None:
+        return
+    if not isinstance(value, Mapping):
+        config.warnings.append("email: must be a mapping of settings, emails are off")
+        return
+    text = {key: str(value[key]).strip() for key in ("to", "from", "username", "password", "smtp_host") if value.get(key)}
+    missing = [key for key in ("to", "from", "password") if key not in text]
+    if missing:
+        config.warnings.append(f"email: {', '.join(missing)} missing, emails are off")
+        return
+    port = value.get("smtp_port", EmailConfig.smtp_port)
+    if not isinstance(port, int):
+        config.warnings.append("email: smtp_port must be a number, emails are off")
+        return
+    config.email = EmailConfig(
+        text["to"],
+        text["from"],
+        text.get("username", text["from"]),
+        text["password"],
+        text.get("smtp_host", EmailConfig.smtp_host),
+        port,
+    )
